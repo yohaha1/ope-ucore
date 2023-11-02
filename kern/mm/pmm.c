@@ -213,6 +213,21 @@ pmm_init(void) {
 pte_t *
 get_pte(pde_t *pgdir, uintptr_t la, bool create) {
 #ifdef LAB2_EX2
+    pde_t *pdep = NULL;     //查找页面页表项
+    pdep = pgdir + PDX(la);
+    if(((*pdep) & PTE_P) == 0){     //检查页表项是否存在
+        if(!create)  return NULL;   //检查是否需要创建，然后为页面表分配页面
+        struct Page *new_pte = alloc_page();    //建立页表引用
+        if(!new_pte) return NULL;   
+        page_ref_inc(new_pte);
+        uintptr_t pa = (uintptr_t)page2kva(new_pte);    //获得页面的虚拟地址
+        memset((void *)pa, 0, PGSIZE);      //使用memset清除页面内容
+        *pdep = PADDR(pa);      //设置页表项的权限
+        (*pdep) |= (PTE_U | PTE_P | PTE_W);
+    }
+    pte_t *ret = (pte_t *)KADDR((uintptr_t)((pte_t *)(PDE_ADDR(*pdep)) + PTX(la)));
+    return ret;     //返回页表项
+#else
     /* LAB2 EXERCISE2: YOUR CODE
      *
      * If you need to visit a physical address, please use KADDR()
@@ -266,6 +281,14 @@ get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store) {
 static inline void
 page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
 #ifdef LAB2_EX3
+    if(ptep && (*ptep & PTE_P)){    //检查页面目录是否存在
+        struct Page *page = pte2page(*ptep);    //找到与页表项相对应的页面
+        page_ref_dec(page);     //减少页面引用
+        if(page_ref(page) == 0) free_page(page);    //如果页表引用数减至0就释放它
+        *ptep = 0;      //清除页面目录条目
+    }
+    tlb_invalidate_all();   //清空快表
+#else
     /* LAB2 EXERCISE3: YOUR CODE
      *
      * Please check if ptep is valid, and tlb must be manually updated if mapping is updated

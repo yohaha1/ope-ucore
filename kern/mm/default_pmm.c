@@ -100,8 +100,8 @@ free_area_t free_area;
 
 static void
 default_init(void) {
-    list_init(&free_list);
-    nr_free = 0;
+    list_init(&free_list);  //定义表头
+    nr_free = 0;        //定义空闲页数
 }
 
 static void
