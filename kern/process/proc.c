@@ -674,7 +674,12 @@ static int load_icode(unsigned char *binary, size_t size) { // load_icode from b
      *          tf->tf_era should be the entry point of this binary program (elf->e_entry)
      *          tf->tf_regs.reg_r[LOONGARCH_REG_SP] should be the top addr of user stack (USTACKTOP)
      */
-
+    tf->tf_era = elf->e_entry;
+    tf->tf_regs.reg_r[LOONGARCH_REG_SP] = USTACKTOP;
+    uint32_t status = 0;
+    status |= PLV_USER;  //set plv = 3(User Mode)
+    status |= CSR_CRMD_IE;
+    tf->tf_prmd = status;
     #endif
     ret = 0;
     out:
